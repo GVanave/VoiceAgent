@@ -1,0 +1,13 @@
+# Backend + Streamlit UI.   cp .env.example .env   then   docker compose up --build   →  http://localhost:8501
+services:
+  api:
+    build:
+      context: .
+      args: { INSTALL_LOCAL: "${INSTALL_LOCAL:-false}" }
+    env_file: .env
+    ports: ["8000:8000"]
+  ui:
+    build: ./frontend
+    environment: { BACKEND_URL: "http://api:8000" }
+    ports: ["8501:8501"]
+    depends_on: [api]

@@ -9,15 +9,22 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    transcriber: Literal["openai", "local"] = "openai"
+    # Engine used when a request does not choose one.
+    transcriber: Literal["openai", "groq", "local"] = "openai"
 
-    # TRANSCRIBER=openai: any OpenAI-compatible /audio/transcriptions endpoint
+    # OpenAI (or any OpenAI-compatible server, e.g. a self-hosted whisper)
     openai_api_url: str = "https://api.openai.com/v1/audio/transcriptions"
     openai_api_key: str = ""
     openai_model: str = "whisper-1"
-    openai_timeout_seconds: float = 120.0
 
-    # TRANSCRIBER=local: faster-whisper running on this machine
+    # Groq
+    groq_api_url: str = "https://api.groq.com/openai/v1/audio/transcriptions"
+    groq_api_key: str = ""
+    groq_model: str = "whisper-large-v3-turbo"
+
+    cloud_timeout_seconds: float = 120.0
+
+    # Local: faster-whisper running on this machine
     local_model: str = "base"
     local_device: str = "cpu"
     local_compute_type: str = "int8"
