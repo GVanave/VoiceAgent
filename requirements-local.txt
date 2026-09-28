@@ -1,0 +1,3 @@
+# Only needed for TRANSCRIBER=local (offline transcription on this machine).
+-r requirements.txt
+faster-whisper==1.2.1
