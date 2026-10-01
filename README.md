@@ -29,7 +29,7 @@ timestamps, so the subtitle download is disabled for them. All server settings a
 ## Run
 
 ```bash
-git clone https://github.com/GVanave/voice-agent.git && cd voice-agent
+git clone https://github.com/GVanave/VoiceAgent.git && cd VoiceAgent
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt -r frontend/requirements.txt   # add requirements-local.txt for offline mode
 cp .env.example .env                                            # provider keys are optional here
