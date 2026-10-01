@@ -1,8 +1,7 @@
 # Voice-to-Text Agent
 
 A small, standalone speech-to-text app: a FastAPI backend plus a Streamlit web UI. Record or upload audio, pick a
-provider, model and language, and get the transcript with timestamps. It is independent of the GuessIngs app in this
-repository and can be moved to its own repository as-is.
+provider, model and language, and get the transcript with timestamps.
 
 ```
  Streamlit UI (frontend/)                  FastAPI backend (app/)
@@ -30,7 +29,7 @@ timestamps, so the subtitle download is disabled for them. All server settings a
 ## Run
 
 ```bash
-cd voice-agent
+git clone https://github.com/GVanave/voice-agent.git && cd voice-agent
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt -r frontend/requirements.txt   # add requirements-local.txt for offline mode
 cp .env.example .env                                            # provider keys are optional here
