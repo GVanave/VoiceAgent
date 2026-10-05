@@ -1,136 +1,259 @@
-# Voice-to-Text Agent
+# 🎙️ VoiceAgent: Voice to Text
 
-A small, standalone speech-to-text app: a FastAPI backend plus a Streamlit web UI. Record or upload audio, pick a
-provider, model and language, and get the transcript with timestamps.
+Record or upload audio in your browser and get an accurate transcript in seconds.
+Choose the **provider**, **model** and **language**, tune the parameters, then download the result as text,
+subtitles or JSON.
 
-```
- Streamlit UI (frontend/)                  FastAPI backend (app/)
- ┌──────────────────────────┐             ┌────────────────────────────────────────────┐
- │ provider · model · key   │ GET /v1/models  access key check (optional)              │
- │ language · temperature   │────────────►│ validate audio (real format + size)        │
- │ prompt · beam size       │ POST /v1/transcribe                                      │
- │ 🎤 record / 📁 upload     │────────────►│ engine ─ openai ─► OpenAI API              │
- │ transcript · .txt .srt   │◄────────────│        ├ groq ───► Groq API                │
- └──────────────────────────┘             │        └ local ──► faster-whisper (offline)│
-                                          └────────────────────────────────────────────┘
-```
+![VoiceAgent screenshot](docs/ui-screenshot.png)
 
-## Engines and models
+- **3 providers:** OpenAI, Groq, or a free offline Whisper model on your own computer
+- **Pick your model:** `whisper-1`, `gpt-4o-transcribe`, `whisper-large-v3-turbo`, `tiny` … `large-v3`
+- **Bring your own API key:** paste it in the app, nothing is stored
+- **21 languages** or auto-detect, plus temperature, beam size and a vocabulary hint
+- **Export:** `.txt`, `.srt` subtitles with timestamps, or `.json`
 
-| Engine | Models | Needs |
-|---|---|---|
-| `openai` | `whisper-1`, `gpt-4o-transcribe`, `gpt-4o-mini-transcribe` | An OpenAI API key (typed in the UI or `OPENAI_API_KEY`) |
-| `groq` | `whisper-large-v3-turbo`, `whisper-large-v3` | A Groq API key (typed in the UI or `GROQ_API_KEY`) |
-| `local` | `tiny`, `base`, `small`, `medium`, `large-v3` | `pip install -r requirements-local.txt`; the model downloads from Hugging Face on first use |
+---
 
-Only models on this list can be requested (see `app/catalog.py`). `gpt-4o-*-transcribe` models don't return
-timestamps, so the subtitle download is disabled for them. All server settings are in [`.env.example`](.env.example).
+## 🚀 Quick start
 
-## Run
+You need **Python 3.11+** ([download](https://www.python.org/downloads/)) and **Git**.
+The app has two parts that run side by side: the **backend** (does the transcription) and the **web UI**.
+You'll use **two terminal windows**.
+
+### 1. Download and install (once)
+
+**macOS / Linux**
 
 ```bash
-git clone https://github.com/GVanave/VoiceAgent.git && cd VoiceAgent
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt -r frontend/requirements.txt   # add requirements-local.txt for offline mode
-cp .env.example .env                                            # provider keys are optional here
-
-uvicorn app.main:app --reload                 # backend  → http://localhost:8000/docs
-streamlit run frontend/app.py                 # web UI   → http://localhost:8501
+git clone https://github.com/GVanave/VoiceAgent.git
+cd VoiceAgent
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt -r frontend/requirements.txt
+cp .env.example .env
 ```
 
-Or with Docker (both services): `docker compose up --build`, then open http://localhost:8501.
-Set `INSTALL_LOCAL=true` in your shell to include the offline engine in the backend image.
+**Windows (PowerShell)**
 
-## Using the UI
+```powershell
+git clone https://github.com/GVanave/VoiceAgent.git
+cd VoiceAgent
+py -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt -r frontend/requirements.txt
+copy .env.example .env
+```
 
-- **Sidebar → Model:** choose the provider and model, and paste your API key. The key is sent with each request only
-  and never stored. Leave it empty if the server has its own key.
-- **Sidebar → Language:** pick the spoken language or leave *Auto-detect*.
-- **Sidebar → Advanced:** *temperature* (0 = most consistent), *beam size* (local engine: higher = more accurate,
-  slower) and a *context hint* with names or jargon to spell correctly.
-- **Sidebar → Connection:** backend URL and the access key (only if the backend sets `API_KEY`).
-- **Main area:** record with the microphone or upload a file, click **Transcribe**, then edit the text and download it
-  as `.txt`, `.srt` subtitles or `.json`.
+> If PowerShell refuses to run `Activate.ps1`, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
 
-## API
+### 2. Start the backend (terminal 1)
 
-### `GET /v1/models`
+```bash
+uvicorn app.main:app --reload
+```
 
-The engines and models the client can choose from, with whether the server has its own key for each provider.
+Leave it running. You should see `Uvicorn running on http://127.0.0.1:8000`.
 
-### `POST /v1/transcribe`
+### 3. Start the web UI (terminal 2)
 
-Multipart form fields (only `file` is required):
+Open a second terminal in the `VoiceAgent` folder, activate the environment again
+(`source .venv/bin/activate`, or `.venv\Scripts\Activate.ps1` on Windows), then:
+
+```bash
+cd frontend
+streamlit run app.py
+```
+
+Your browser opens **http://localhost:8501** automatically. 🎉
+
+### 4. Transcribe
+
+1. In the sidebar, choose a **Provider** and **Model**, and paste your **API key**
+   ([OpenAI key](https://platform.openai.com/api-keys) · [Groq key](https://console.groq.com/keys), Groq has a free tier).
+2. Pick the **Spoken language**, or leave *Auto-detect*.
+3. Click **🎤 Record** and speak, or **📁 Upload** an audio file.
+4. Click **✨ Transcribe**. Edit the text if you like, then download it.
+
+**Next time**, you only need steps 2 and 3: activate the environment and start both parts.
+
+---
+
+## 🐳 Alternative: start with Docker (one command)
+
+If you have [Docker Desktop](https://www.docker.com/products/docker-desktop/), you don't need Python:
+
+```bash
+git clone https://github.com/GVanave/VoiceAgent.git
+cd VoiceAgent
+cp .env.example .env          # Windows: copy .env.example .env
+docker compose up --build
+```
+
+Then open **http://localhost:8501**. Stop it with `Ctrl+C`.
+
+---
+
+## 🧠 Providers and models
+
+| Provider | Models | Cost | Notes |
+|---|---|---|---|
+| **OpenAI** | `whisper-1`, `gpt-4o-transcribe`, `gpt-4o-mini-transcribe` | Paid, per minute | `gpt-4o-*` are the most accurate but return no timestamps |
+| **Groq** | `whisper-large-v3-turbo`, `whisper-large-v3` | Free tier available | Very fast, with timestamps |
+| **Local (offline)** | `tiny`, `base`, `small`, `medium`, `large-v3` | Free | Runs on your computer, audio never leaves it |
+
+### Using the free offline engine
+
+```bash
+pip install -r requirements-local.txt
+```
+
+Restart the backend, choose **Local (offline)** in the sidebar, and start with the `base` model.
+The first run downloads the model (~140 MB for `base`, up to ~3 GB for `large-v3`), so it takes a little longer.
+With Docker, use `INSTALL_LOCAL=true docker compose up --build` instead.
+
+---
+
+## 🎛️ Settings in the app
+
+| Setting | What it does |
+|---|---|
+| **Provider / Model** | Which service and model transcribe your audio |
+| **API key** | Your OpenAI or Groq key. It's sent with each request only and never saved. Leave it empty if the server has a key in `.env` |
+| **Spoken language** | Setting it improves accuracy and speed; *Auto-detect* works too |
+| **Temperature** *(Advanced)* | `0` = most consistent output. Raise it only if the text repeats itself |
+| **Beam size** *(Advanced)* | Local engine only. Higher = more accurate but slower |
+| **Context hint** *(Advanced)* | Names or terms to spell correctly, e.g. `Ganesh, Karlsruhe, FastAPI` |
+| **Connection** | Backend URL and optional access key, if the backend is not on your computer |
+
+---
+
+## ⚙️ Server configuration (`.env`)
+
+Everything is optional. The app works without editing `.env` if users paste their own API key.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `TRANSCRIBER` | `openai` | Provider selected when the app opens: `openai`, `groq` or `local` |
+| `OPENAI_API_KEY` / `GROQ_API_KEY` | *(empty)* | Server-side keys, so users don't need their own |
+| `OPENAI_MODEL` / `GROQ_MODEL` / `LOCAL_MODEL` | `whisper-1` / `whisper-large-v3-turbo` / `base` | Default model per provider |
+| `OPENAI_API_URL` | OpenAI | Point to a self-hosted, OpenAI-compatible Whisper server |
+| `LOCAL_DEVICE` | `cpu` | Set to `cuda` to use an NVIDIA GPU for the offline engine |
+| `API_KEY` | *(empty)* | Protect the backend with an access key (entered under **Connection** in the UI) |
+| `MAX_AUDIO_MB` | `25` | Maximum upload size |
+
+---
+
+## 🛠️ Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| **"Backend offline"** in the sidebar | Start the backend (step 2) and check that terminal for errors |
+| **"Enter your … API key"** | Paste your key in the sidebar, or put it in `.env` and restart the backend |
+| **"… rejected the API key"** | The key is wrong or expired. Create a new one |
+| **"The local engine is not installed"** | Run `pip install -r requirements-local.txt` and restart the backend |
+| **"Speech model … could not be loaded"** | The first download needs internet access to `huggingface.co` |
+| **Microphone doesn't record** | Allow microphone access for `localhost:8501` in your browser |
+| **`streamlit` / `uvicorn` not found** | Activate the environment first: `source .venv/bin/activate` (Windows: `.venv\Scripts\Activate.ps1`) |
+| **Port already in use** | Use another port: `uvicorn app.main:app --port 8001`, then set `http://localhost:8001` under **Connection** |
+
+---
+
+## 🏗️ How it works
+
+```mermaid
+flowchart LR
+    UI["🖥️ Web UI<br/>Streamlit · :8501"] -- "audio + settings" --> API["⚙️ Backend<br/>FastAPI · :8000"]
+    API --> CHECK["Check access key<br/>and audio file"]
+    CHECK --> OAI["☁️ OpenAI API"]
+    CHECK --> GROQ["☁️ Groq API"]
+    CHECK --> LOCAL["💻 faster-whisper<br/>(offline)"]
+    OAI & GROQ & LOCAL -- "text + timestamps" --> API
+    API -- "transcript" --> UI
+```
+
+1. The **web UI** sends the audio and your settings to the **backend**.
+2. The backend checks the access key (if set), and checks the file really is audio and isn't too large.
+3. It sends the audio to the chosen provider, or runs Whisper locally.
+4. The transcript, language, duration and timestamps go back to the UI.
+
+Audio is only held in memory during the request. Nothing is saved.
+A longer explanation with a diagram is in [`docs/Voice-Agent-Architecture.docx`](docs/Voice-Agent-Architecture.docx).
+
+### Project structure
+
+```
+VoiceAgent/
+├── app/                    backend (FastAPI)
+│   ├── main.py             API routes, access key check, errors
+│   ├── catalog.py          providers and their models
+│   ├── transcribers.py     OpenAI/Groq client and the offline Whisper engine
+│   ├── audio.py            audio file validation
+│   ├── config.py           settings from .env
+│   └── schemas.py          response formats
+├── frontend/               web UI (Streamlit)
+│   ├── app.py              the page
+│   ├── utils.py            timestamp and subtitle formatting
+│   └── .streamlit/         theme
+├── tests/                  backend tests (frontend/tests/ has the UI tests)
+├── docs/                   architecture document and screenshot
+├── .env.example            configuration template
+└── docker-compose.yml      runs backend + UI together
+```
+
+---
+
+## 🔌 API (for developers)
+
+The backend can be used without the UI. Interactive docs: **http://localhost:8000/docs**
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /health` | Is the backend running? |
+| `GET /v1/models` | Available providers and models |
+| `POST /v1/transcribe` | Transcribe an audio file |
+
+`POST /v1/transcribe` takes a multipart form. Only `file` is required:
 
 | Field | Description |
 |---|---|
-| `file` | WAV, MP3, M4A, WebM, OGG or FLAC; max `MAX_AUDIO_MB` (default 25) |
-| `engine` | `openai`, `groq` or `local` (default: `TRANSCRIBER`) |
-| `model` | One of the engine's models (default: the engine's default) |
-| `language` | ISO-639-1 code (`en`, `hi`, `de`, …); omit to auto-detect |
-| `temperature` | 0–1, default 0 |
-| `beam_size` | 1–10, default 5 (local engine only) |
-| `prompt` | Context or vocabulary hint, max 500 characters |
-| `provider_api_key` | Your own OpenAI/Groq key for this request (overrides the server's key) |
+| `file` | WAV, MP3, M4A, WebM, OGG or FLAC, up to 25 MB |
+| `engine` | `openai`, `groq` or `local` |
+| `model` | A model of that engine (see `/v1/models`) |
+| `language` | Two-letter code such as `en`, `hi`, `de`; omit to auto-detect |
+| `temperature` | `0`–`1` (default `0`) |
+| `beam_size` | `1`–`10` (default `5`, local engine only) |
+| `prompt` | Vocabulary or context hint (max 500 characters) |
+| `provider_api_key` | Your OpenAI/Groq key for this request |
 
 ```bash
 curl -X POST http://localhost:8000/v1/transcribe \
-  -F file=@meeting.m4a -F engine=groq -F model=whisper-large-v3-turbo -F language=en \
-  -F provider_api_key=$GROQ_API_KEY
+  -F file=@meeting.m4a -F engine=groq -F language=en \
+  -F provider_api_key=YOUR_GROQ_KEY
 ```
 
 ```json
 {
-  "text": "And so my fellow Americans, ask not what your country can do for you...",
+  "text": "Hello and welcome to the meeting.",
   "language": "en",
-  "duration_seconds": 11.0,
-  "segments": [{ "start": 0.0, "end": 11.0, "text": "And so my fellow Americans, ..." }],
+  "duration_seconds": 3.2,
+  "segments": [{ "start": 0.0, "end": 3.2, "text": "Hello and welcome to the meeting." }],
   "engine": "groq",
   "model": "whisper-large-v3-turbo",
-  "processing_seconds": 0.8
+  "processing_seconds": 0.6
 }
 ```
 
-Add `-H "Authorization: Bearer $API_KEY"` when the backend sets `API_KEY`.
+Errors look like `{"error": {"code": "api_key_required", "message": "Enter your Groq API key to use this engine."}}`.
+If `API_KEY` is set in `.env`, add the header `Authorization: Bearer <API_KEY>`.
 
-Errors are returned as `{"error": {"code": "...", "message": "..."}}`:
+---
 
-| Status | Code | When |
-|---|---|---|
-| 400 | `unsupported_format`, `audio_too_short` | Not an audio file / empty file |
-| 400 | `unknown_model`, `api_key_required`, `invalid_api_key` | Model not offered / no provider key / key rejected |
-| 401 | `unauthorized` | Access key (`API_KEY`) missing or wrong |
-| 413 | `file_too_large` | Over `MAX_AUDIO_MB` |
-| 422 | `no_speech`, `transcription_failed` | Silence / audio could not be decoded |
-| 429 | `provider_rate_limited` | The provider's rate limit or quota was reached |
-| 502 | `transcription_failed` | The provider could not be reached or failed |
-| 503 | `engine_not_configured`, `model_unavailable` | Local engine not installed / model could not be loaded |
-
-### `GET /health`
-
-`{"status": "ok", "engine": "openai", "ready": true}` for the default engine.
-
-## Project layout
-
-```
-app/                  backend
-  main.py             routes, access-key check, error handler
-  catalog.py          engines and the models each one offers
-  transcribers.py     CloudTranscriber (OpenAI, Groq) and LocalTranscriber behind one interface
-  audio.py            upload validation (format detected from file bytes, size limit)
-  config.py           settings from environment / .env
-  schemas.py          response models
-frontend/             Streamlit UI
-  app.py              the page: sidebar settings, record/upload, results
-  utils.py            timestamp and .srt formatting
-tests/                backend tests       frontend/tests/   UI tests (no network or API key needed)
-```
-
-Adding another provider means adding it to `catalog.py` and returning an engine from `build_transcriber()`.
-
-## Tests
+## 🧪 Running the tests
 
 ```bash
 pip install -r requirements-dev.txt
-ruff check . && pytest
+ruff check .
+pytest
 ```
+
+The tests need no API key and no internet. They also run automatically on GitHub for every push.
